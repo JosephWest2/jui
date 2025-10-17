@@ -7,6 +7,12 @@
 
 #include "SDL3/SDL_render.h"
 
+using std::ranges::input_range;
+using std::ranges::to;
+using std::set;
+using std::vector;
+using std::unique_ptr;
+
 namespace ui {
 namespace component {
 
@@ -20,19 +26,14 @@ enum SelfProperties {
 
 class Component {
   protected:
-    std::set<ChildProperties> child_properties{};
-    std::set<SelfProperties> self_properties{};
-    std::vector<std::unique_ptr<Component>> children{};
+    set<ChildProperties> child_properties{};
+    set<SelfProperties> self_properties{};
+    vector<unique_ptr<Component>> children{};
 
   public:
-    template <std::ranges::input_range R1,
-              std::ranges::input_range R2,
-              std::ranges::input_range R3>
-    Component(R1&& self_properties, R2&& child_properties, R3&& children)
-        : child_properties(std::ranges::begin(child_properties),
-                           std::ranges::end(child_properties)),
-          self_properties(std::ranges::begin(self_properties),
-                          std::ranges::end(self_properties)) {}
+    Component(input_range auto&& self_properties, input_range auto&& child_properties, input_range auto&& children)
+        : child_properties(to<set<ChildProperties>>(child_properties)),
+          self_properties(to<set<SelfProperties>>(self_properties)) {}
     virtual void Render(SDL_Renderer* renderer) = 0;
 
     virtual ~Component() = default;
