@@ -24,7 +24,7 @@ target_link_libraries(${PROJECT_NAME}
     SDL3_ttf::SDL3_ttf
 )
 target_include_directories(${PROJECT_NAME}
-    PRIVATE ${SDL_SOURCE_DIR}/include
-    PRIVATE ${SDL_TTF_SOURCE_DIR}/include
-    PRIVATE src
+    PUBLIC ${SDL_SOURCE_DIR}/include
+    PUBLIC ${SDL_TTF_SOURCE_DIR}/include
+    PUBLIC src
 )
