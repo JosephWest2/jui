@@ -5,18 +5,13 @@
 
 #include "component/logical/logical_component.hpp"
 
-using std::allocator;
-using std::shared_ptr;
-using std::vector;
-using std::ranges::ref_view;
-
 namespace component {
 namespace logical {
 
 class LogicContainer {
   public:
-    virtual ref_view<vector<shared_ptr<LogicalComponent>,
-                            allocator<shared_ptr<LogicalComponent>>>>
+    virtual std::ranges::ref_view<std::vector<std::shared_ptr<LogicalComponent>,
+                            std::allocator<std::shared_ptr<LogicalComponent>>>>
     LogicalComponents() = 0;
 };
 

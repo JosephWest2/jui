@@ -8,23 +8,34 @@ set(CMAKE_BUILD_TYPE Debug)
 
 set(SDL_SOURCE_DIR external/sdl)
 set(SDL_TTF_SOURCE_DIR external/sdl_ttf)
+set(SDL_IMAGE_SOURCE_DIR external/sdl_image)
+set(ABSEIL_SOURCE_DIR external/abseil)
 set(PROJECT_NAME jui)
 
 project(${PROJECT_NAME} VERSION 0.1)
 
-set(SOURCES 
-    src/app.cpp
+file (GLOB_RECURSE 
+    SOURCES
+    CONFIGURE_DEPENDS
+    src/*.cpp
 )
+
 add_library(${PROJECT_NAME} ${SOURCES})
 
 add_subdirectory(${SDL_SOURCE_DIR})
 add_subdirectory(${SDL_TTF_SOURCE_DIR})
+add_subdirectory(${SDL_IMAGE_SOURCE_DIR})
+add_subdirectory(${ABSEIL_SOURCE_DIR})
+
 target_link_libraries(${PROJECT_NAME}
     SDL3::SDL3
     SDL3_ttf::SDL3_ttf
+    SDL3_image::SDL3_image
+    absl::flat_hash_map
 )
 target_include_directories(${PROJECT_NAME}
-    PUBLIC ${SDL_SOURCE_DIR}/include
-    PUBLIC ${SDL_TTF_SOURCE_DIR}/include
-    PUBLIC src
+    PRIVATE ${SDL_SOURCE_DIR}/include
+    PRIVATE ${SDL_TTF_SOURCE_DIR}/include
+    PRIVATE ${SDL_IMAGE_SOURCE_DIR}/include
+    PRIVATE src
 )

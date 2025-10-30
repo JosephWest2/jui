@@ -3,79 +3,103 @@
 #include <SDL3/SDL.h>
 
 #include <format>
-#include <stdexcept>
+#include <memory>
+#include <queue>
+#include <variant>
 
+#include "SDL3/SDL_events.h"
 #include "SDL3_ttf/SDL_ttf.h"
+#include "event/event.hpp"
+#include "event/event_manager.hpp"
+#include "event/window_redraw_request.hpp"
 
-using std::runtime_error;
-using std::unique_ptr;
-using std::format;
-
-App::App(const char* app_name,
-         const char* app_version,
-         const char* app_identifier) {
+App::App(const char* app_name, const char* app_version, const char* app_identifier) {
     // Init SDL
     if (!SDL_SetAppMetadata(app_name, app_version, app_identifier)) {
-        auto error_msg =
-            format("Failed to set app metadata: {}", SDL_GetError());
-        throw runtime_error(error_msg);
+        auto error_msg = std::format("Failed to set app metadata: {}", SDL_GetError());
+        throw std::runtime_error(error_msg);
     }
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        auto error_msg =
-            format("Failed to initialize SDL: {}", SDL_GetError());
-        throw runtime_error(error_msg);
+        auto error_msg = std::format("Failed to initialize SDL: {}", SDL_GetError());
+        throw std::runtime_error(error_msg);
     }
-    if (!SDL_CreateWindowAndRenderer(
-            app_name, 960, 720, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
-        auto error_msg = format(
-            "Failed to create SDL window and renderer: {}", SDL_GetError());
-        throw runtime_error(error_msg);
-    }
-
     // Init SDL_ttf
     if (!TTF_Init()) {
         SDL_Log("Failed to initialize SDL_ttf: %s", SDL_GetError());
     }
-    font = TTF_OpenFont("CousineNerdFont-Regular.ttf", DEFAULT_FONT_SIZE);
-    if (!font) {
-        auto error_msg = format("Failed to load font: {}", SDL_GetError());
-        throw runtime_error(error_msg);
-    }
-    text_engine = TTF_CreateRendererTextEngine(renderer);
-    if (!text_engine) {
-        auto error_msg = format("Failed to create SDL_ttf text engine: {}",
-                                     SDL_GetError());
-        throw runtime_error(error_msg);
-    }
 }
 
-App::~App() {
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    TTF_CloseFont(font);
-    TTF_DestroyRendererTextEngine(text_engine);
-}
+App::~App() { SDL_Quit(); }
 
 void App::Run() {
-    SDL_Event e;
-    bool quit = false;
-    while (!quit) {
-        while (SDL_PollEvent(&e)) {
-            quit = input_handler.HandleInput(e);
-        }
-        if (ui_state.HasChanged()) {
-            Render();
+    std::queue<std::variant<SDL_Event, std::unique_ptr<event::Event>>> events;
+    while (!should_quit) {
+        if (ShouldPollEvents()) {
+            event::EventManager::Get().PollEvents(events);
+        } else {
+            event::EventManager::Get().WaitEvents(events);
         }
     }
 }
 
-void App::Render() {
-    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
-    SDL_RenderClear(renderer);
-    ui_state.Render(renderer);
-    SDL_RenderPresent(renderer);
+bool App::ShouldPollEvents() {
+    for (const auto& window : windows) {
+        if (window->GetControlFlow() == window::ControlFlow::POLL) {
+            return true;
+        }
+    }
+    return false;
+}
+void App::HandleEvents(std::queue<std::variant<SDL_Event, std::unique_ptr<event::Event>>>& events) {
+    while (!events.empty()) {
+        auto event = std::move(events.front());
+        events.pop();
+        if (std::holds_alternative<std::unique_ptr<event::Event>>(event)) {
+            auto custom_event = std::move(std::get<std::unique_ptr<event::Event>>(event));
+            if (auto event = dynamic_cast<event::WindowRedrawRequest*>(custom_event.get())) {
+                for (auto& window : windows) {
+                    if (window->ID() == event->window_id) {
+                        window->RequestRedraw();
+                    }
+                }
+            }
+        } else {
+            auto sdl_event = std::get<SDL_Event>(event);
+            switch (sdl_event.type) {
+                case SDL_EVENT_QUIT:
+                    should_quit = true;
+                    break;
+                case SDL_EVENT_KEY_DOWN:
+                    input_handler.HandleKeyDown(sdl_event.key);
+                    break;
+                case SDL_EVENT_KEY_UP:
+                    input_handler.HandleKeyUp(sdl_event.key);
+                    break;
+                case SDL_EVENT_MOUSE_MOTION:
+                    input_handler.HandleMouseMotion(sdl_event.motion);
+                    break;
+                case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                    input_handler.HandleMouseDown(sdl_event.button);
+                    break;
+                case SDL_EVENT_MOUSE_BUTTON_UP:
+                    input_handler.HandleMouseUp(sdl_event.button);
+                    break;
+                case SDL_EVENT_MOUSE_WHEEL:
+                    input_handler.HandleMouseWheel(sdl_event.wheel);
+                    break;
+            }
+        }
+    }
+    for (auto& window : windows) {
+        window->DrawIfNeeded();
+    }
+}
+std::shared_ptr<window::Window> App::CreateWindow(const char* window_title,
+                                                  int width,
+                                                  int height,
+                                                  window::ControlFlow control_flow) {
+    auto window = std::make_shared<window::Window>(window_title, width, height, control_flow);
+    windows.push_back(window);
+    return window;
 }
 
-void App::Add(unique_ptr<ui::component::Component>&& component) {
-    ui_state.Add(std::move(component));
-}

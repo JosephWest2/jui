@@ -1,34 +1,37 @@
 #pragma once
 
 #include <memory>
+#include <queue>
+#include <variant>
+#include <vector>
 
-#include "SDL3/SDL_render.h"
-#include "SDL3/SDL_video.h"
-#include "SDL3_ttf/SDL_ttf.h"
-#include "input/handler.hpp"
-#include "ui/component/component.hpp"
-#include "ui/state.hpp"
+#include "event/event.hpp"
+#include "input/input_handler.hpp"
+#include "window/window.hpp"
 
 const int DEFAULT_FONT_SIZE = 16;
 
 class App {
-  private:
+  protected:
     // SDL
-    SDL_Renderer* renderer;
-    SDL_Window* window;
-    TTF_Font* font;
-    TTF_TextEngine* text_engine;
-
-    ui::State ui_state;
-    input::Handler input_handler;
+    bool should_quit = false;
+    std::vector<std::shared_ptr<window::Window>> windows;
+    input::InputHandler input_handler;
 
     void Render();
 
+    bool ShouldPollEvents();
+
+    void HandleEvents(std::queue<std::variant<SDL_Event, std::unique_ptr<event::Event>>>& event);
+
   public:
     void Run();
-    void Add(std::unique_ptr<ui::component::Component>&& component);
-    App(const char* app_name,
-        const char* app_version,
-        const char* app_identifier);
+    // returns the event id
+    uint RegisterCustomEvent() { return SDL_RegisterEvents(1); }
+    std::shared_ptr<window::Window> CreateWindow(const char* window_title,
+                                                 int width,
+                                                 int height,
+                                                 window::ControlFlow control_flow = window::ControlFlow::WAIT);
+    App(const char* app_name, const char* app_version, const char* app_identifier);
     ~App();
 };

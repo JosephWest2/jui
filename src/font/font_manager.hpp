@@ -1,16 +1,13 @@
 #pragma once
 
-#include <string>
-#include <unordered_map>
-#include "font/font.hpp"
+#include <absl/container/flat_hash_map.h>
 
-using std::unordered_map;
-using std::string;
+#include "SDL3_ttf/SDL_ttf.h"
 
 namespace font {
 
 class FontManager {
-  private:
+  protected:
     FontManager() = default;
     ~FontManager() = default;
     FontManager(const FontManager&) = delete;
@@ -19,14 +16,10 @@ class FontManager {
     FontManager& operator=(FontManager&&) = delete;
 
     // map from font name to font size to font
-    unordered_map<string, unordered_map<uint, Font>> fonts;
+    absl::flat_hash_map<std::string, absl::flat_hash_map<uint, TTF_Font*>> fonts;
 
   public:
-    static FontManager& Get() {
-        static FontManager instance;
-        return instance;
-    }
-
-    
+    static FontManager& Get();
+    TTF_Font* GetFont(const std::string_view font_name, const uint font_size);
 };
 }  // namespace font

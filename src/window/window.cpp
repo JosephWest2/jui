@@ -4,25 +4,20 @@
 
 #include "SDL3/SDL_video.h"
 
-using std::runtime_error;
-using std::string;
-
 namespace window {
 
 Window::Window(const char* window_title, int width, int height, ControlFlow control_flow) : control_flow(control_flow) {
     window = SDL_CreateWindow(window_title, width, height, SDL_WINDOW_RESIZABLE);
     if (!window) {
-        throw runtime_error("Failed to create SDL window: " + string(SDL_GetError()));
+        throw std::runtime_error("Failed to create SDL window: " + std::string(SDL_GetError()));
     }
-    renderer = Renderer(window);
+    renderer = renderer::Renderer(window);
 }
 
-const char* Window::Title() const { return SDL_GetWindowTitle(window); }
-
-pair<int, int> Window::GetDimensions() const {
+std::pair<int, int> Window::GetDimensions() const {
     int w, h;
     if (!SDL_GetWindowSize(window, &w, &h)) {
-        throw runtime_error("Failed to get window size: " + string(SDL_GetError()));
+        throw std::runtime_error("Failed to get window size: " + std::string(SDL_GetError()));
     }
     return {w, h};
 }
@@ -30,12 +25,28 @@ pair<int, int> Window::GetDimensions() const {
 void Window::Draw() {
     assert(renderer);
     for (auto& component : components) {
-        component.Draw(*renderer);
+        component->DrawRecursive(*renderer);
     }
 }
 
-int Window::GetWidth() const { return GetDimensions().first; }
-int Window::GetHeight() const { return GetDimensions().second; }
 Window::~Window() { SDL_DestroyWindow(window); };
 
+void Window::DrawIfNeeded() {
+    if (window_redraw_needed) {
+        Draw();
+        window_redraw_needed = false;
+    }
+}
+void Window::RegisterComponent(std::shared_ptr<component::Component>& component) { 
+    component->window = shared_from_this();
+    components.push_back(component);
+}
+bool Window::ContainsComponent(std::shared_ptr<component::Component>& component) {
+    for (auto& c : components) {
+        if (c == component || c->ContainsComponent(component)) {
+            return true;
+        }
+    }
+    return false;
+}
 }  // namespace window
