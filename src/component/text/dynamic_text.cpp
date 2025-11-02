@@ -9,6 +9,7 @@ void DynamicText::OnClick(math::geometry::Point point) {
     button::Button::OnClick(point); 
     TTF_SubString substring;
     assert(TTF_GetTextSubStringForPoint(text, point.x, point.y, &substring));
+    TTF_Font* font;
 }
 
 }  // namespace text
