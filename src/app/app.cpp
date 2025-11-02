@@ -4,14 +4,9 @@
 
 #include <format>
 #include <memory>
-#include <queue>
-#include <variant>
 
 #include "SDL3/SDL_events.h"
 #include "SDL3_ttf/SDL_ttf.h"
-#include "event/event.hpp"
-#include "event/event_manager.hpp"
-#include "event/window_redraw_request.hpp"
 
 App::App(const char* app_name, const char* app_version, const char* app_identifier) {
     // Init SDL
@@ -32,13 +27,13 @@ App::App(const char* app_name, const char* app_version, const char* app_identifi
 App::~App() { SDL_Quit(); }
 
 void App::Run() {
-    std::queue<std::variant<SDL_Event, std::unique_ptr<event::Event>>> events;
-    while (!should_quit) {
-        if (ShouldPollEvents()) {
-            event::EventManager::Get().PollEvents(events);
-        } else {
-            event::EventManager::Get().WaitEvents(events);
-        }
+    SDL_Event event;
+    if (!ShouldPollEvents()) {
+        SDL_WaitEvent(&event);
+        event_handlers[event.type](event);
+    }
+    while (SDL_PollEvent(&event)) {
+        event_handlers[event.type](event);
     }
 }
 
@@ -50,50 +45,6 @@ bool App::ShouldPollEvents() {
     }
     return false;
 }
-void App::HandleEvents(std::queue<std::variant<SDL_Event, std::unique_ptr<event::Event>>>& events) {
-    while (!events.empty()) {
-        auto event = std::move(events.front());
-        events.pop();
-        if (std::holds_alternative<std::unique_ptr<event::Event>>(event)) {
-            auto custom_event = std::move(std::get<std::unique_ptr<event::Event>>(event));
-            if (auto event = dynamic_cast<event::WindowRedrawRequest*>(custom_event.get())) {
-                for (auto& window : windows) {
-                    if (window->ID() == event->window_id) {
-                        window->RequestRedraw();
-                    }
-                }
-            }
-        } else {
-            auto sdl_event = std::get<SDL_Event>(event);
-            switch (sdl_event.type) {
-                case SDL_EVENT_QUIT:
-                    should_quit = true;
-                    break;
-                case SDL_EVENT_KEY_DOWN:
-                    input_handler.HandleKeyDown(sdl_event.key);
-                    break;
-                case SDL_EVENT_KEY_UP:
-                    input_handler.HandleKeyUp(sdl_event.key);
-                    break;
-                case SDL_EVENT_MOUSE_MOTION:
-                    input_handler.HandleMouseMotion(sdl_event.motion);
-                    break;
-                case SDL_EVENT_MOUSE_BUTTON_DOWN:
-                    input_handler.HandleMouseDown(sdl_event.button);
-                    break;
-                case SDL_EVENT_MOUSE_BUTTON_UP:
-                    input_handler.HandleMouseUp(sdl_event.button);
-                    break;
-                case SDL_EVENT_MOUSE_WHEEL:
-                    input_handler.HandleMouseWheel(sdl_event.wheel);
-                    break;
-            }
-        }
-    }
-    for (auto& window : windows) {
-        window->DrawIfNeeded();
-    }
-}
 std::shared_ptr<window::Window> App::CreateWindow(const char* window_title,
                                                   int width,
                                                   int height,
@@ -103,3 +54,25 @@ std::shared_ptr<window::Window> App::CreateWindow(const char* window_title,
     return window;
 }
 
+std::shared_ptr<window::Window> App::GetWindowByID(SDL_WindowID id) {
+    for (auto& window : windows) {
+        if (window->ID() == id) {
+            return window;
+        }
+    }
+    return nullptr;
+}
+
+bool App::UnRegisterCustomEvent(uint event_id) {
+    if (!event_handlers.contains(event_id)) {
+        return false;
+    }
+    event_handlers.erase(event_id);
+    return true;
+}
+
+uint App::RegisterCustomEvent(std::function<void(SDL_Event)> handler) {
+    uint event_id = SDL_RegisterEvents(1);
+    event_handlers[event_id] = handler;
+    return event_id;
+}

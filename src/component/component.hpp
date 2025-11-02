@@ -19,10 +19,10 @@ namespace logical {
 }
 
 class Component {
-  protected:
-    virtual void Draw(window::renderer::Renderer& renderer) = 0;
-
   public:
+    virtual void Draw(SDL_Renderer* renderer) = 0;
+    virtual SDL_FRect BoundingBox() = 0;
+    virtual SDL_FPoint Position() = 0;
     std::set<ComponentFlags> component_flags;
     std::weak_ptr<window::Window> window;
     std::vector<std::shared_ptr<logical::LogicalComponent>> logical_components;

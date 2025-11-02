@@ -6,6 +6,7 @@
 
 namespace window {
 
+
 Window::Window(const char* window_title, int width, int height, ControlFlow control_flow) : control_flow(control_flow) {
     window = SDL_CreateWindow(window_title, width, height, SDL_WINDOW_RESIZABLE);
     if (!window) {

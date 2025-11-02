@@ -8,6 +8,8 @@ namespace component {
 namespace container {
 class Container : public Component {
   public:
+      SDL_Color fill_color;
+      SDL_Color border_color;
     std::set<ComponentFlags> container_flags;
 };
 
