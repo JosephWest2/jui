@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "SDL3/SDL_video.h"
+#include "SDL3_ttf/SDL_ttf.h"
 #include "component/component.hpp"
 #include "component/logical/logical_component.hpp"
 #include "window/renderer/renderer.hpp"
@@ -100,6 +101,8 @@ class Window : public std::enable_shared_from_this<Window> {
     void AddLogicalComponent(std::shared_ptr<component::logical::LogicalComponent>& logical_component) {
         logical_components.push_back(logical_component);
     };
+
+    TTF_TextEngine* text_engine;
 
     // returns {width, height}
     std::pair<int, int> GetDimensions() const;

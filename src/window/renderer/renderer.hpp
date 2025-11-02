@@ -7,11 +7,9 @@ namespace window {
 namespace renderer {
 
 class Renderer {
-  protected:
+  public:
     SDL_Renderer* renderer{nullptr};
     TTF_TextEngine* text_engine{nullptr};
-
-  public:
     Renderer(SDL_Window* sdl_window);
     ~Renderer();
 };

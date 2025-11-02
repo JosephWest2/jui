@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "SDL3/SDL_video.h"
+#include "SDL3_ttf/SDL_ttf.h"
 
 namespace window {
 

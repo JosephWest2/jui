@@ -8,6 +8,11 @@ Button::Button(std::shared_ptr<input::button::ButtonInputManager>& input_manager
     input_manager->RegisterButton(self);
 }
 
-}
+void Button::OnClick(math::geometry::Point point) {
+    if (on_click) {
+        on_click(point);
+    }
+};
+}  // namespace button
 }
 
